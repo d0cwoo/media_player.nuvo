@@ -1,6 +1,8 @@
 import logging
 import voluptuous as vol
 
+import homeassistant.helpers.config_validation as cv
+
 from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.components.media_player.const import (
     ATTR_MEDIA_ENQUEUE,
@@ -26,3 +28,5 @@ from homeassistant.const import (
     STATE_PAUSED,
     STATE_PLAYING,
 )
+
+_LOGGER = logging.getLogger(__name__)
