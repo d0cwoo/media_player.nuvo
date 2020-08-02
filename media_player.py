@@ -1,32 +1,37 @@
+"""Support for interfacing with Nuvo Multi-Zone Amplifier via serial/RS-232."""
+
 import logging
+
 import voluptuous as vol
 
-import homeassistant.helpers.config_validation as cv
-
-# Import the device class from the component that you want to support
-from homeassistant.components.media_player import PLATFORM_SCHEMA, MediaPlayerEntity
+# Import the device class from home assistant component
+from homeassistant.components.media_player import MediaPlayerDevice, PLATFORM_SCHEMA
 from homeassistant.components.media_player.const import (
     DOMAIN,
     SUPPORT_SELECT_SOURCE,
     SUPPORT_TURN_OFF,
     SUPPORT_TURN_ON,
     SUPPORT_VOLUME_MUTE,
-    SUPPORT_VOLUME_STEP,
     SUPPORT_VOLUME_SET,
+    SUPPORT_VOLUME_STEP,
 )
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    CONF_NAME,
+    CONF_PORT,
+    STATE_OFF,
+    STATE_ON,
+)
+import homeassistant.helpers.config_validation as cv
 
-from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST, CONF_NAME, CONF_PORT, STATE_OFF, STATE_ON
+# Home Assistant depends on 3rd party packages for API specific code.
+# REQUIREMENTS = ['pynuvo==0.3']
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORT_NUVO = (
-                 SUPPORT_SELECT_SOURCE
-               | SUPPORT_VOLUME_MUTE
-               | SUPPORT_VOLUME_SET
-               | SUPPORT_VOLUME_STEP
-               | SUPPORT_TURN_ON
-               | SUPPORT_TURN_OFF
-)
+SUPPORT_NUVO = SUPPORT_VOLUME_MUTE | SUPPORT_VOLUME_SET | \
+                    SUPPORT_VOLUME_STEP | SUPPORT_TURN_ON | \
+                    SUPPORT_TURN_OFF | SUPPORT_SELECT_SOURCE
 
 ZONE_SCHEMA = vol.Schema({
     vol.Required(CONF_NAME): cv.string,
@@ -45,15 +50,15 @@ DATA_NUVO = 'nuvo'
 SERVICE_SNAPSHOT = 'snapshot'
 SERVICE_RESTORE = 'restore'
 
-# Valid zone ids: 1-20
-ZONE_IDS = vol.All(vol.Coerce(int), vol.Any(vol.Range(min=1, max=20)))
+# Valid zone ids: 1-12
+ZONE_IDS = vol.All(vol.Coerce(int), vol.Any(
+    vol.Range(min=1, max=12)))
 
 # Valid source ids: 1-6
 SOURCE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=6))
 
 MEDIA_PLAYER_SCHEMA = vol.Schema({ATTR_ENTITY_ID: cv.comp_entity_ids})
 
-# Validation of the user's configuration
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_PORT): cv.string,
     vol.Required(CONF_ZONES): vol.Schema({ZONE_IDS: ZONE_SCHEMA}),
@@ -75,7 +80,6 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     sources = {source_id: extra[CONF_NAME] for source_id, extra
                in config[CONF_SOURCES].items()}
-        _LOGGER.info("Test Adding sources %s", source_id, sources])
 
     hass.data[DATA_NUVO] = []
     for zone_id, extra in config[CONF_ZONES].items():
@@ -85,20 +89,21 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     add_entities(hass.data[DATA_NUVO], True)
 
-def service_handle(service):
-    """Handle for services."""
-    entity_ids = service.data.get(ATTR_ENTITY_ID)
+    def service_handle(service):
+        """Handle for services."""
+        entity_ids = service.data.get(ATTR_ENTITY_ID)
 
-    if entity_ids:
-       devices = [device for device in hass.data[DATA_NUVO]
-                  if device.entity_id in entity_ids]
-    else:
-       devices = hass.data[DATA_NUVO]
-    for device in devices:
-        if service.service == SERVICE_SNAPSHOT:
-           device.snapshot()
-        elif service.service == SERVICE_RESTORE:
-           device.restore()
+        if entity_ids:
+            devices = [device for device in hass.data[DATA_NUVO]
+                       if device.entity_id in entity_ids]
+        else:
+            devices = hass.data[DATA_NUVO]
+
+        for device in devices:
+            if service.service == SERVICE_SNAPSHOT:
+                device.snapshot()
+            elif service.service == SERVICE_RESTORE:
+                device.restore()
 
     hass.services.register(
         DOMAIN, SERVICE_SNAPSHOT, service_handle, schema=MEDIA_PLAYER_SCHEMA)
@@ -106,8 +111,9 @@ def service_handle(service):
     hass.services.register(
         DOMAIN, SERVICE_RESTORE, service_handle, schema=MEDIA_PLAYER_SCHEMA)
 
-class NuvoZone(MediaPlayerEntity):
-"""Representation of a Nuvo amplifier zone."""
+
+class NuvoZone(MediaPlayerDevice):
+    """Representation of a Nuvo amplifier zone."""
 
     def __init__(self, nuvo, sources, zone_id, zone_name):
         """Initialize new zone."""
@@ -229,3 +235,14 @@ class NuvoZone(MediaPlayerEntity):
         if self._volume is None:
             return
         self._nuvo.set_volume(self._zone_id, (self._volume + 1))
+
+
+
+
+
+
+
+
+
+
+
