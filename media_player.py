@@ -66,7 +66,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     port = config.get(CONF_PORT)
 
     from serial import SerialException
-    from pynuvo import get_nuvo
+#    from pynuvo import get_nuvo   # pynuvo with old Baud rate that is not correct for Grand Concerto or Essentia
+    from .pynuvo3 import get_nuvo  # save pynuvo __init__ file as pynuvo3.py and place in same custom configuration folder
+
     try:
         nuvo = get_nuvo(port)
     except SerialException:
@@ -158,7 +160,7 @@ class NuvoZone(MediaPlayerEntity):
         """Volume level of the media player (0..1)."""
         if self._volume is None:
             return None
-        return ( abs(((self._volume - 79) * 1) / -79))
+        return (79 - self._volume) / 79.0
 
     @property
     def is_volume_muted(self):
@@ -216,16 +218,16 @@ class NuvoZone(MediaPlayerEntity):
 
     def set_volume_level(self, volume):
         """Set volume level, range 0..1."""
-        self._nuvo.set_volume(self._zone_id, int(((volume *  -79) / 1) + 79))
+        self._nuvo.set_volume(self._zone_id, int( 79 - volume * 79 ))
 
     def volume_up(self):
         """Volume up the media player."""
         if self._volume is None:
             return
-        self._nuvo.set_volume(self._zone_id, (self._volume - 1))
+        self._nuvo.set_volume(self._zone_id, max (self._volume - 1, 0))
 
     def volume_down(self):
         """Volume down media player."""
         if self._volume is None:
             return
-        self._nuvo.set_volume(self._zone_id, (self._volume + 1))
+        self._nuvo.set_volume(self._zone_id, min (self._volume + 1, 79))
