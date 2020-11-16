@@ -2,7 +2,7 @@
   "domain": "nuvo",
   "name": "Nuvo",
   "documentation": "https://github.com/ejonesnospam/hass.media_player.nuvo",
-  "requirements": [], # removed pynuvo==0.3 
+  "requirements": [], 
   "dependencies": [],
   "codeowners": ["ejonesnospam", "SmilinJoe"]
 }
