@@ -2,7 +2,7 @@
 import asyncio
 import logging
 
-from pynuvo2 import get_nuvo
+from pynuvo3 import get_nuvo
 from serial import SerialException
 
 from homeassistant.config_entries import ConfigEntry
