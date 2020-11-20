@@ -1,8 +1,8 @@
 {
-  "domain": "nuvo",
-  "name": "Nuvo",
-  "documentation": "https://github.com/ejonesnospam/hass.media_player.nuvo",
-  "requirements": [], 
-  "dependencies": [],
-  "codeowners": ["ejonesnospam", "SmilinJoe"]
+  "domain": "monoprice",
+  "name": "Monoprice 6-Zone Amplifier",
+  "documentation": "https://www.home-assistant.io/integrations/monoprice",
+  "requirements": ["pynuvo==0.2"],
+  "codeowners": ["@etsinko", "@OnFreund"],
+  "config_flow": true
 }
