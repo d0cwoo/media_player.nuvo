@@ -12,6 +12,6 @@ https://github.com/home-assistant/core/tree/dev/homeassistant/components/blackbi
 
 
 # Manual install
-Download and unzip the repo archive. (You could also click "Download ZIP" after pressing the green button in the repo, alternatively, you could clone the repo from SSH add-on).
-Copy contents of the archive/repo into your /config directory.
-Restart your Home Assistant.
+1. Download and unzip the repo archive. (You could also click "Download ZIP" after pressing the green button in the repo, alternatively, you could clone the repo from SSH add-on).
+2. Copy contents of the archive/repo into your /config directory.
+3. Restart your Home Assistant.
