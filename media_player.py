@@ -1,9 +1,12 @@
+"""Support for interfacing with Nuvo Multi-Zone Amplifier via serial/RS-232."""
+
 import logging
 import voluptuous as vol
 
-import homeassistant.helpers.config_validation as cv
+from serial import SerialException
+from .pynuvo3 import get_nuvo
 
-# Import the device class from the component that you want to support
+from homeassistant import core
 from homeassistant.components.media_player import PLATFORM_SCHEMA, MediaPlayerEntity
 from homeassistant.components.media_player.const import (
     DOMAIN,
@@ -11,107 +14,135 @@ from homeassistant.components.media_player.const import (
     SUPPORT_TURN_OFF,
     SUPPORT_TURN_ON,
     SUPPORT_VOLUME_MUTE,
-    SUPPORT_VOLUME_STEP,
     SUPPORT_VOLUME_SET,
+    SUPPORT_VOLUME_STEP,
 )
+from homeassistant.const import (
+    ATTR_ENTITY_ID, 
+    CONF_NAME,
+    CONF_PORT, 
+    CONF_TYPE,
+    STATE_OFF, 
+    STATE_ON,
+)
+from homeassistant.helpers import config_validation as cv
 
-from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST, CONF_NAME, CONF_PORT, STATE_OFF, STATE_ON
+# from .const import (
+#     CONF_SOURCES,
+#     DOMAIN,
+#     FIRST_RUN,
+#     NUVO_OBJECT,
+#     SERVICE_RESTORE,
+#     SERVICE_SNAPSHOT,
+#     SERVICE_SETALLZONES,
+# )
 
 _LOGGER = logging.getLogger(__name__)
 
 SUPPORT_NUVO = (
-                 SUPPORT_SELECT_SOURCE
-               | SUPPORT_VOLUME_MUTE
-               | SUPPORT_VOLUME_SET
-               | SUPPORT_VOLUME_STEP
-               | SUPPORT_TURN_ON
-               | SUPPORT_TURN_OFF
+    SUPPORT_VOLUME_MUTE 
+    | SUPPORT_VOLUME_SET
+    | SUPPORT_VOLUME_STEP
+    | SUPPORT_TURN_ON
+    | SUPPORT_TURN_OFF
+    | SUPPORT_SELECT_SOURCE
 )
-
-ZONE_SCHEMA = vol.Schema({
-    vol.Required(CONF_NAME): cv.string,
-})
-
-SOURCE_SCHEMA = vol.Schema({
-    vol.Required(CONF_NAME): cv.string,
-})
-
-CONF_ZONES = 'zones'
-CONF_SOURCES = 'sources'
-CONF_MODEL = 'model'
-
-DATA_NUVO = 'nuvo'
-
-SERVICE_SNAPSHOT = 'snapshot'
-SERVICE_RESTORE = 'restore'
-
-# Valid zone ids: 1-20
-ZONE_IDS = vol.All(vol.Coerce(int), vol.Any(vol.Range(min=1, max=20)))
-
-# Valid source ids: 1-6
-SOURCE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=6))
 
 MEDIA_PLAYER_SCHEMA = vol.Schema({ATTR_ENTITY_ID: cv.comp_entity_ids})
 
-# Validation of the user's configuration
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_PORT): cv.string,
-    vol.Required(CONF_ZONES): vol.Schema({ZONE_IDS: ZONE_SCHEMA}),
-    vol.Required(CONF_SOURCES): vol.Schema({SOURCE_IDS: SOURCE_SCHEMA}),
-    vol.Optional(CONF_MODEL): cv.string,
-})
+ZONE_SCHEMA = vol.Schema({vol.Required(CONF_NAME): cv.string})
+
+SOURCE_SCHEMA = vol.Schema({vol.Required(CONF_NAME): cv.string})
+
+CONF_ZONES = "zones"
+CONF_SOURCES = "sources"
+CONF_MODEL = "essentia"
+DATA_NUVO = "nuvo"
+ATTR_SOURCE = "source"
+SERVICE_SNAPSHOT = 'snapshot'
+SERVICE_RESTORE = 'restore'
+SERVICE_SETALLZONES = "set_all_zones"
+
+NUVO_SETALLZONES_SCHEMA = MEDIA_PLAYER_SCHEMA.extend(
+    {vol.Required(ATTR_SOURCE): cv.string}
+)
+
+# Valid zone ids: 1-6
+ZONE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=6))
+
+# Valid source ids: 1-4
+SOURCE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=4))
+
+PLATFORM_SCHEMA = vol.All(
+    cv.has_at_least_one_key(CONF_PORT),
+    PLATFORM_SCHEMA.extend(
+        {
+            vol.Exclusive(CONF_PORT, CONF_TYPE): cv.string,
+            vol.Required(CONF_ZONES): vol.Schema({ZONE_IDS: ZONE_SCHEMA}),
+            vol.Required(CONF_SOURCES): vol.Schema({SOURCE_IDS: SOURCE_SCHEMA}),
+            vol.Optional(CONF_MODEL): cv.string,
+        }
+    ),
+)
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the Nuvo multi zone amplifier platform."""
+    """Set up the Nuvo platform."""
+    if DATA_NUVO not in hass.data:
+        hass.data[DATA_NUVO] = {}
+
     port = config.get(CONF_PORT)
 
-    from serial import SerialException
-#    from pynuvo import get_nuvo   # pynuvo with old Baud rate that is not correct for Grand Concerto or Essentia
-    from .pynuvo3 import get_nuvo  # save pynuvo __init__ file as pynuvo3.py and place in same custom configuration folder
+    connection = None
+    if port is not None:
+        try:
+            nuvo = get_nuvo(port)
+            connection = port
+        except SerialException:
+            _LOGGER.error("Error connecting to the Nuvo controller via Serial")
+            return
 
-    try:
-        nuvo = get_nuvo(port)
-    except SerialException:
-        _LOGGER.error("Error connecting to Nuvo controller")
-        return
+    sources = {
+        source_id: extra[CONF_NAME] for source_id, extra in config[CONF_SOURCES].items()
+    }
 
-    sources = {source_id: extra[CONF_NAME] for source_id, extra
-               in config[CONF_SOURCES].items()}
-        _LOGGER.info("Test Adding sources %s", source_id, sources])
-
-    hass.data[DATA_NUVO] = []
+    devices = []
     for zone_id, extra in config[CONF_ZONES].items():
         _LOGGER.info("Adding zone %d - %s", zone_id, extra[CONF_NAME])
-        hass.data[DATA_NUVO].append(NuvoZone(
-            nuvo, sources, zone_id, extra[CONF_NAME]))
+        unique_id = f"{connection}-{extra[CONF_NAME]}"  # change to entity ID.zone name
+        _LOGGER.info("The unique_id is %s", unique_id)
+        device = NuvoZone(nuvo, sources, zone_id, extra[CONF_NAME], unique_id)
+        hass.data[DATA_NUVO][unique_id] = device
+        devices.append(device)
 
-    add_entities(hass.data[DATA_NUVO], True)
+    add_entities(devices, True)
 
-def service_handle(service):
-    """Handle for services."""
-    entity_ids = service.data.get(ATTR_ENTITY_ID)
+    def service_handle(service):
+        """Handle for services."""
+        entity_ids = service.data.get(ATTR_ENTITY_ID)
+        source = service.data.get(ATTR_SOURCE)
+        if entity_ids:
+            devices = [
+                device
+                for device in hass.data[DATA_NUVO].values()
+                if device.entity_id in entity_ids
+            ]
 
-    if entity_ids:
-       devices = [device for device in hass.data[DATA_NUVO]
-                  if device.entity_id in entity_ids]
-    else:
-       devices = hass.data[DATA_NUVO]
-    for device in devices:
-        if service.service == SERVICE_SNAPSHOT:
-           device.snapshot()
-        elif service.service == SERVICE_RESTORE:
-           device.restore()
+        else:
+            devices = hass.data[DATA_NUVO].values()
+
+        for device in devices:
+            if service.service == SERVICE_SETALLZONES:
+                device.set_all_zones(source)
 
     hass.services.register(
-        DOMAIN, SERVICE_SNAPSHOT, service_handle, schema=MEDIA_PLAYER_SCHEMA)
+        DOMAIN, SERVICE_SETALLZONES, service_handle, schema=NUVO_SETALLZONES_SCHEMA
+    )
 
-    hass.services.register(
-        DOMAIN, SERVICE_RESTORE, service_handle, schema=MEDIA_PLAYER_SCHEMA)
 
 class NuvoZone(MediaPlayerEntity):
-"""Representation of a Nuvo amplifier zone."""
+    """Representation of a Nuvo amplifier zone."""
 
-    def __init__(self, nuvo, sources, zone_id, zone_name):
+    def __init__(self, nuvo, sources, zone_id, zone_name, unique_id):
         """Initialize new zone."""
         self._nuvo = nuvo
         # dict source_id -> source name
@@ -123,6 +154,7 @@ class NuvoZone(MediaPlayerEntity):
                                     key=lambda v: self._source_name_id[v])
         self._zone_id = zone_id
         self._name = zone_name
+        self._unique_id = unique_id  # maybe change to f"{zone_name}-{self._zone_id}""
 
         self._snapshot = None
         self._state = None
@@ -146,6 +178,21 @@ class NuvoZone(MediaPlayerEntity):
         return True
 
     @property
+    def device_info(self):
+        """Return device info for this device."""
+        return {
+            "identifiers": {(DOMAIN, self.unique_id)},
+            "name": self.name,
+            "manufacturer": "Nuvo",
+            "model": "Essentia",
+        }
+
+    @property
+    def unique_id(self):
+        """Return unique ID for this device."""
+        return self._unique_id
+
+    @property
     def name(self):
         """Return the name of the zone."""
         return self._name
@@ -160,7 +207,7 @@ class NuvoZone(MediaPlayerEntity):
         """Volume level of the media player (0..1)."""
         if self._volume is None:
             return None
-        return (79 - self._volume) / 79.0
+        return (79 - self._volume) / 79.0   # Nuvo with vol 0=Max and 79=Min
 
     @property
     def is_volume_muted(self):
@@ -211,7 +258,7 @@ class NuvoZone(MediaPlayerEntity):
     def turn_off(self):
         """Turn the media player off."""
         self._nuvo.set_power(self._zone_id, False)
-
+        
     def mute_volume(self, mute):
         """Mute (true) or unmute (false) media player."""
         self._nuvo.set_mute(self._zone_id, mute)
@@ -224,10 +271,10 @@ class NuvoZone(MediaPlayerEntity):
         """Volume up the media player."""
         if self._volume is None:
             return
-        self._nuvo.set_volume(self._zone_id, max (self._volume - 1, 0))
+        self._nuvo.set_volume(self._zone_id, max (self._volume - 1, 0))  # Nuvo: 0=Max and 79=Min
 
     def volume_down(self):
         """Volume down media player."""
         if self._volume is None:
             return
-        self._nuvo.set_volume(self._zone_id, min (self._volume + 1, 79))
+        self._nuvo.set_volume(self._zone_id, min (self._volume + 1, 79)) # Nuvo: 0=Max and 79=Min
