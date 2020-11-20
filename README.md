@@ -7,6 +7,7 @@ Instead of using the pynuvo (which uses the wrong Baud rate for Grand Concerto a
 pynuvo3 incorporates other integration for similar multizone controller amplifier already in the Home Assistant core, namely "Monoprice 6-zone Amplifier" and "Monoprice Blackbird Matrix Switch" 
 
 https://github.com/home-assistant/core/tree/dev/homeassistant/components/monoprice
+
 https://github.com/home-assistant/core/tree/dev/homeassistant/components/blackbird
 
 
