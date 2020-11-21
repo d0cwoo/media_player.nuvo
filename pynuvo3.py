@@ -47,7 +47,7 @@ EOL = b'\r\n'
 LEN_EOL = len(EOL)  # not in original pynuvo, but needed for async
 TIMEOUT_OP       = 0.2   # Number of seconds before serial operation timeout, this is sig shorter than in blackbird which is 2.0
 TIMEOUT_RESPONSE = 2.5   # Number of seconds before command response timeout
-VOLUME_DEFAULT  = 60    # Value used when zone is muted or otherwise unable to get volume integer
+VOLUME_DEFAULT  = 79    # Value used when zone is muted or otherwise unable to get volume integer
 
 class ZoneStatus(object):     # #Z1,ON,SRC4,VOL60,DND0,LOCK0 – POWER ON (page 7 of NUVO Protocol.pdf)
     def __init__(self
