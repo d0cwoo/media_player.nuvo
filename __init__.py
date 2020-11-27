@@ -1,4 +1,6 @@
 """ The Nuvo Essentia integration """
+# Modified from Monoprice core integration
+
 import asyncio
 import logging
 
