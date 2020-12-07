@@ -70,8 +70,8 @@ NUVO_SETALLZONES_SCHEMA = MEDIA_PLAYER_SCHEMA.extend(
 # Valid zone ids: 1-6
 ZONE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=6))
 
-# Valid source ids: 1-4
-SOURCE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=4))
+# Valid source ids: 1-6
+SOURCE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=6))
 
 PLATFORM_SCHEMA = vol.All(
     cv.has_at_least_one_key(CONF_PORT),
