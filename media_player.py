@@ -161,12 +161,21 @@ class NuvoZone(MediaPlayerEntity):
         self._volume = None
         self._source = None
         self._mute = None
+        self._update_success = True
 
     def update(self):
         """Retrieve latest state."""
-        state = self._nuvo.zone_status(self._zone_id)
+        try:
+            state = self._nuvo.zone_status(self._zone_id)
+        except SerialException:
+            self._update_success = False
+            _LOGGER.warning("Could not update zone %d", self._zone_id)
+            return
+        
         if not state:
-            return False
+            self._update_success = False
+            return
+        
         self._state = STATE_ON if state.power else STATE_OFF
         self._volume = state.volume
         self._mute = state.mute
@@ -175,8 +184,13 @@ class NuvoZone(MediaPlayerEntity):
             self._source = self._source_id_name[idx]
         else:
             self._source = None
-        return True
+#         return True
 
+    @property
+    def entity_registry_enables_default(self):
+        """Return if the entity should be enabled when first added to the entity registry."""
+        return self._zone_id < 20 or self._update_success
+    
     @property
     def device_info(self):
         """Return device info for this device."""
