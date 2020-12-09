@@ -336,7 +336,7 @@ def get_nuvo(port_url):
         @synchronized
         def zone_status(self, zone: int):
             # Returns status of the zone
-            return ZoneStatus.from_string(self._process_request(_format_zone_status_request(zone)))
+            return ZoneStatus.from_string(self._process_request(_format_zone_status_request(zone), skip=20))
 
         @synchronized
         def set_power(self, zone: int, power: bool):
@@ -415,8 +415,8 @@ def get_async_nuvo(port_url, loop):
         @locked_coro
         @asyncio.coroutine
         def zone_status(self, zone: int):
-            string = yield from self._protocol.send(_format_zone_status_request(zone))
-            return ZoneStatus.from_string(string)
+            string = yield from self._protocol.send(_format_zone_status_request(zone), skip=15)
+            return ZoneStatus.from_string(zone, string)
 
         @locked_coro
         @asyncio.coroutine
