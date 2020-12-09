@@ -160,7 +160,7 @@ class Nuvo(object):
         """
         raise NotImplemented()
 
-    def set_treble(self, zone: int, treble: float):
+    def set_treble(self, zone: int, treble: int):
         """
         Set treble for zone
         :param zone: zone 1.12        
@@ -364,12 +364,12 @@ def get_nuvo(port_url):
             self._process_request(_format_set_volume_down(zone))
 
         @synchronized
-        def set_treble(self, zone: int, treble: float):
+        def set_treble(self, zone: int, treble: int):
             # set the treble of the zone
             self._process_request(_format_set_treble(zone, treble))
 
         @synchronized
-        def set_bass(self, zone: int, bass: float):
+        def set_bass(self, zone: int, bass: int):
             # set the bass of the zone
             self._process_request(_format_set_bass(zone, bass))
 
@@ -416,7 +416,7 @@ def get_async_nuvo(port_url, loop):
         @asyncio.coroutine
         def zone_status(self, zone: int):
             string = yield from self._protocol.send(_format_zone_status_request(zone))
-            return ZoneStatus.from_string(zone, string)
+            return ZoneStatus.from_string(string)
 
         @locked_coro
         @asyncio.coroutine
