@@ -7,7 +7,7 @@ import logging
 # import voluptuous as vol
 
 from serial import SerialException
-from .pynuvo3 import get_nuvo
+from pynuvo import get_async_nuvo
 
 from homeassistant import core
 # from homeassistant.components.media_player import PLATFORM_SCHEMA, MediaPlayerEntity
@@ -67,95 +67,95 @@ SUPPORT_NUVO = (
     | SUPPORT_SELECT_SOURCE
 )
 
-# MEDIA_PLAYER_SCHEMA = vol.Schema({ATTR_ENTITY_ID: cv.comp_entity_ids})
+MEDIA_PLAYER_SCHEMA = vol.Schema({ATTR_ENTITY_ID: cv.comp_entity_ids})
 
-# ZONE_SCHEMA = vol.Schema({vol.Required(CONF_NAME): cv.string})
+ZONE_SCHEMA = vol.Schema({vol.Required(CONF_NAME): cv.string})
 
-# SOURCE_SCHEMA = vol.Schema({vol.Required(CONF_NAME): cv.string})
+SOURCE_SCHEMA = vol.Schema({vol.Required(CONF_NAME): cv.string})
 
-# CONF_ZONES = "zones"
-# CONF_SOURCES = "sources"
-# CONF_MODEL = "essentia"
-# DATA_NUVO = "nuvo"
-# ATTR_SOURCE = "source"
-# SERVICE_SNAPSHOT = 'snapshot'
-# SERVICE_RESTORE = 'restore'
-# SERVICE_SETALLZONES = "set_all_zones"
+CONF_ZONES = "zones"
+CONF_SOURCES = "sources"
+CONF_MODEL = "essentia"
+DATA_NUVO = "nuvo"
+ATTR_SOURCE = "source"
+SERVICE_SNAPSHOT = 'snapshot'
+SERVICE_RESTORE = 'restore'
+SERVICE_SETALLZONES = "set_all_zones"
 
-# NUVO_SETALLZONES_SCHEMA = MEDIA_PLAYER_SCHEMA.extend(
-#     {vol.Required(ATTR_SOURCE): cv.string}
-# )
+NUVO_SETALLZONES_SCHEMA = MEDIA_PLAYER_SCHEMA.extend(
+    {vol.Required(ATTR_SOURCE): cv.string}
+)
 
-# # Valid zone ids: 1-6
-# ZONE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=6))
+# Valid zone ids: 1-6
+ZONE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=6))
 
-# # Valid source ids: 1-4
-# SOURCE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=4))
+# Valid source ids: 1-4
+SOURCE_IDS = vol.All(vol.Coerce(int), vol.Range(min=1, max=4))
 
-# PLATFORM_SCHEMA = vol.All(
-#     cv.has_at_least_one_key(CONF_PORT),
-#     PLATFORM_SCHEMA.extend(
-#         {
-#             vol.Exclusive(CONF_PORT, CONF_TYPE): cv.string,
-#             vol.Required(CONF_ZONES): vol.Schema({ZONE_IDS: ZONE_SCHEMA}),
-#             vol.Required(CONF_SOURCES): vol.Schema({SOURCE_IDS: SOURCE_SCHEMA}),
-#             vol.Optional(CONF_MODEL): cv.string,
-#         }
-#     ),
-# )
+PLATFORM_SCHEMA = vol.All(
+    cv.has_at_least_one_key(CONF_PORT),
+    PLATFORM_SCHEMA.extend(
+        {
+            vol.Exclusive(CONF_PORT, CONF_TYPE): cv.string,
+            vol.Required(CONF_ZONES): vol.Schema({ZONE_IDS: ZONE_SCHEMA}),
+            vol.Required(CONF_SOURCES): vol.Schema({SOURCE_IDS: SOURCE_SCHEMA}),
+            vol.Optional(CONF_MODEL): cv.string,
+        }
+    ),
+)
 
-# # def setup_platform(hass, config, add_entities, discovery_info=None):
-#     """Set up the Nuvo platform."""
-#     if DATA_NUVO not in hass.data:
-#         hass.data[DATA_NUVO] = {}
+# def setup_platform(hass, config, add_entities, discovery_info=None):
+    """Set up the Nuvo platform."""
+    if DATA_NUVO not in hass.data:
+        hass.data[DATA_NUVO] = {}
 
-#     port = config.get(CONF_PORT)
+    port = config.get(CONF_PORT)
 
-#     connection = None
-#     if port is not None:
-#         try:
-#             nuvo = get_nuvo(port)
-#             connection = port
-#         except SerialException:
-#             _LOGGER.error("Error connecting to the Nuvo controller via Serial")
-#             return
+    connection = None
+    if port is not None:
+        try:
+            nuvo = get_nuvo(port)
+            connection = port
+        except SerialException:
+            _LOGGER.error("Error connecting to the Nuvo controller via Serial")
+            return
 
-#     sources = {
-#         source_id: extra[CONF_NAME] for source_id, extra in config[CONF_SOURCES].items()
-#     }
+    sources = {
+        source_id: extra[CONF_NAME] for source_id, extra in config[CONF_SOURCES].items()
+    }
 
-#     devices = []
-#     for zone_id, extra in config[CONF_ZONES].items():
-#         _LOGGER.info("Adding zone %d - %s", zone_id, extra[CONF_NAME])
-#         unique_id = f"{connection}-{extra[CONF_NAME]}"  # change to entity ID.zone name
-#         _LOGGER.info("The unique_id is %s", unique_id)
-#         device = NuvoZone(nuvo, sources, zone_id, extra[CONF_NAME], unique_id)
-#         hass.data[DATA_NUVO][unique_id] = device
-#         devices.append(device)
+    devices = []
+    for zone_id, extra in config[CONF_ZONES].items():
+        _LOGGER.info("Adding zone %d - %s", zone_id, extra[CONF_NAME])
+        unique_id = f"{connection}-{extra[CONF_NAME]}"  # change to entity ID.zone name
+        _LOGGER.info("The unique_id is %s", unique_id)
+        device = NuvoZone(nuvo, sources, zone_id, extra[CONF_NAME], unique_id)
+        hass.data[DATA_NUVO][unique_id] = device
+        devices.append(device)
 
-#     add_entities(devices, True)
+    add_entities(devices, True)
 
-#     def service_handle(service):
-#         """Handle for services."""
-#         entity_ids = service.data.get(ATTR_ENTITY_ID)
-#         source = service.data.get(ATTR_SOURCE)
-#         if entity_ids:
-#             devices = [
-#                 device
-#                 for device in hass.data[DATA_NUVO].values()
-#                 if device.entity_id in entity_ids
-#             ]
+    def service_handle(service):
+        """Handle for services."""
+        entity_ids = service.data.get(ATTR_ENTITY_ID)
+        source = service.data.get(ATTR_SOURCE)
+        if entity_ids:
+            devices = [
+                device
+                for device in hass.data[DATA_NUVO].values()
+                if device.entity_id in entity_ids
+            ]
 
-#         else:
-#             devices = hass.data[DATA_NUVO].values()
+        else:
+            devices = hass.data[DATA_NUVO].values()
 
-#         for device in devices:
-#             if service.service == SERVICE_SETALLZONES:
-#                 device.set_all_zones(source)
+        for device in devices:
+            if service.service == SERVICE_SETALLZONES:
+                device.set_all_zones(source)
 
-#     hass.services.register(
-#         DOMAIN, SERVICE_SETALLZONES, service_handle, schema=NUVO_SETALLZONES_SCHEMA
-#     )
+    hass.services.register(
+        DOMAIN, SERVICE_SETALLZONES, service_handle, schema=NUVO_SETALLZONES_SCHEMA
+    )
 
 @core.callback
 def _get_sources_from_dict(data):
