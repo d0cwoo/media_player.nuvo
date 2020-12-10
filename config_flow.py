@@ -1,7 +1,6 @@
 """Config flow for Nuvo 6-Zone Amplifier integration."""
 import logging
 
-from .pynuvo3 import get_async_nuvo
 from serial import SerialException
 import voluptuous as vol
 
