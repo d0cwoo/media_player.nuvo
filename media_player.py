@@ -184,7 +184,7 @@ class NuvoZone(MediaPlayerEntity):
             self._source = self._source_id_name[idx]
         else:
             self._source = None
-#         return True
+        return True
 
     @property
     def entity_registry_enables_default(self):
