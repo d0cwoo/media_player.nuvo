@@ -1,6 +1,8 @@
 """Config flow for Nuvo 6-Zone Amplifier integration."""
 import logging
 
+from pynuvo import get_async_nuvo
+
 from serial import SerialException
 import voluptuous as vol
 
@@ -8,7 +10,6 @@ from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_PORT
 
 from .const import (
-    DOMAIN,
     CONF_SOURCE_1,
     CONF_SOURCE_2,
     CONF_SOURCE_3,
