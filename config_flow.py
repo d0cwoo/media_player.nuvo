@@ -8,6 +8,7 @@ from homeassistant import config_entries, core, exceptions
 from homeassistant.const import CONF_PORT
 
 from .const import (
+    DOMAIN,
     CONF_SOURCE_1,
     CONF_SOURCE_2,
     CONF_SOURCE_3,
